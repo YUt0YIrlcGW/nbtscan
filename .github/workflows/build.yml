@@ -1,44 +1,18 @@
-name: Build and Test  
-
-on:  
-  workflow_dispatch:  # Allows manual triggering  
-
-jobs:  
-  build:  
-
-    runs-on: ${{ matrix.os }}  
-
-    strategy:  
-      matrix:  
-        os: [ubuntu-latest, windows-latest]  
-        arch: [x86, x64]  
-
-    steps:  
-    - uses: actions/checkout@v2  
-
-    - name: Set up dependencies  
-      run: |  
-        if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then  
-          sudo apt-get update  
-          sudo apt-get install -y build-essential  
-          if [ "${{ matrix.arch }}" == "x86" ]; then  
-            sudo apt-get install -y gcc-multilib  
-            export CFLAGS=-m32  
-            export LDFLAGS=-m32  
-          fi  
-        else  
-          choco install mingw  
-          if [ "${{ matrix.arch }}" == "x86" ]; then  
-            # Additional setup for x86 if needed  
-            echo "Setting up for Windows x86"  
-          fi  
-
-    - name: Build Project  
-      run: |  
-        ./autogen.sh  
-        ./configure  
-        make  
-
-    - name: Test Project  
-      run: |  
-        make test
+- name: Set up dependencies  
+  run: |  
+    if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then  
+      sudo apt-get update  
+      sudo apt-get install -y build-essential  
+      if [ "${{ matrix.arch }}" == "x86" ]; then  
+        sudo apt-get install -y gcc-multilib  
+        export CFLAGS=-m32  
+        export LDFLAGS=-m32  
+      fi  
+    elif [ "${{ matrix.os }}" == "windows-latest" ]; then  
+      choco install mingw  
+      if [ "${{ matrix.arch }}" == "x86" ]; then  
+        # Additional setup for x86 if needed  
+        echo "Setting up for Windows x86"  
+      fi  
+    fi  
+  shell: bash
