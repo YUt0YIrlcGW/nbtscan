@@ -3,8 +3,8 @@ name: Build and Release
 on:  
   push:  
     tags:  
-      - 'v*.*.*'  # Trigger on tags in this format (e.g., v1.0.0)  
-  workflow_dispatch:  # Allows manual triggering of the workflow  
+      - 'v*.*.*'  
+  workflow_dispatch:  
 
 jobs:  
   build-and-release:  
@@ -18,11 +18,6 @@ jobs:
     steps:  
     - name: Check out Git repository  
       uses: actions/checkout@v3  
-
-    - name: Set up Python environment  
-      uses: actions/setup-python@v4  
-      with:  
-        python-version: '3.x'  
 
     - name: Set up the build environment  
       run: |  
@@ -44,52 +39,12 @@ jobs:
 
     - name: Build project  
       run: |  
-        echo "Starting build for ${{ matrix.os }} ${ matrix.arch }}"  
         ./autogen.sh  
         ./configure  
         make  
-
-    - name: Create release assets  
-      run: |  
-        mkdir -p release/${{ matrix.os }}-${{ matrix.arch }}  
-        cp nbtscan* release/${{ matrix.os }}-${{ matrix.arch }}  
 
     - name: Upload Release Assets  
       uses: actions/upload-artifact@v3  
       with:  
         name: nbtscan-${{ matrix.os }}-${{ matrix.arch }}  
-        path: release/${{ matrix.os }}-${{ matrix.arch }}  
-
-  create-release:  
-    needs: build-and-release  
-    runs-on: ubuntu-latest  
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')  
-
-    steps:  
-    - name: Check out Git repository  
-      uses: actions/checkout@v3  
-
-    - name: Download build artifacts  
-      uses: actions/download-artifact@v3  
-      with:  
-        name: nbtscan-ubuntu-latest-x86  
-        path: ./release  
-    - uses: actions/download-artifact@v3  
-      with:  
-        name: nbtscan-ubuntu-latest-x64  
-        path: ./release  
-    - uses: actions/download-artifact@v3  
-      with:  
-        name: nbtscan-windows-latest-x86  
-        path: ./release  
-    - uses: actions/download-artifact@v3  
-      with:  
-        name: nbtscan-windows-latest-x64  
-        path: ./release  
-
-    - name: Create GitHub Release  
-      uses: softprops/action-gh-release@v1  
-      with:  
-        files: ./release/**  
-      env:  
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        path: release/${{ matrix.os }}-${{ matrix.arch }}
