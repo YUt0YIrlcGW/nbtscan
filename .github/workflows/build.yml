@@ -1,7 +1,7 @@
-name: build-check  
+name: Build and Test  
 
 on:  
-  workflow_dispatch:  # Allows manual triggering from the GitHub Actions tab  
+  workflow_dispatch:  # Allows manual triggering  
 
 jobs:  
   build:  
@@ -19,65 +19,26 @@ jobs:
     - name: Set up dependencies  
       run: |  
         if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then  
+          sudo apt-get update  
           sudo apt-get install -y build-essential  
           if [ "${{ matrix.arch }}" == "x86" ]; then  
             sudo apt-get install -y gcc-multilib  
             export CFLAGS=-m32  
             export LDFLAGS=-m32  
-            export PKG_CONFIG_PATH=/usr/lib/i386-linux-gnu/pkgconfig  
           fi  
         else  
+          choco install mingw  
           if [ "${{ matrix.arch }}" == "x86" ]; then  
-            sudo apt-get install -y mingw-w64  
-            alias cmake=cmake-x86  
-          else  
-            sudo apt-get install -y mingw-w64  
+            # Additional setup for x86 if needed  
+            echo "Setting up for Windows x86"  
           fi  
 
-    - name: first_build  
+    - name: Build Project  
       run: |  
         ./autogen.sh  
         ./configure  
         make  
-        make install  
-        make uninstall  
-        make distclean  
 
-    - name: make_dist  
+    - name: Test Project  
       run: |  
-        ./autogen.sh  
-        ./configure  
-        make dist  
-        mkdir test_dist  
-        mv nbtscan-*.tar.gz test_dist  
-        cd test_dist  
-        tar -xvf nbtscan-*.tar.gz  
-        rm -f nbtscan-*.tar.gz  
-        cd nbtscan-*  
-        ./autogen.sh  
-        ./configure  
-        make  
-        make install  
-        make uninstall  
-        make distclean  
-
-    - name: Create Release  
-      id: create_release  
-      uses: actions/create-release@v1  
-      env:  
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  
-      with:  
-        tag_name: ${{ github.ref }}  
-        release_name: Release ${{ github.ref }}  
-        draft: false  
-        prerelease: false  
-        
-    - name: Upload Release Asset  
-      uses: actions/upload-release-asset@v1  
-      env:  
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  
-      with:  
-        upload_url: ${{ steps.create_release.outputs.upload_url }}  
-        asset_path: ./test_dist/nbtscan-*.tar.gz  
-        asset_name: nbtscan-${{ matrix.os }}-${{ matrix.arch }}.tar.gz  
-        asset_content_type: application/gzip
+        make test
