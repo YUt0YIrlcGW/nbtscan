@@ -1,9 +1,7 @@
 name: build-check  
 
 on:  
-  push:  
-    tags:  
-      - 'v*'  # Triggers the workflow on version tags  
+  workflow_dispatch:  # Allows manual triggering from the GitHub Actions tab  
 
 jobs:  
   build:  
