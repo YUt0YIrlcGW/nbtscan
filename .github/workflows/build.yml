@@ -1,36 +1,85 @@
-name: full-check
+name: build-check  
 
-on: [push, pull_request]
+on:  
+  push:  
+    tags:  
+      - 'v*'  # Triggers the workflow on version tags  
 
-jobs:
-  build:
+jobs:  
+  build:  
 
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}  
 
-    steps:
-    - uses: actions/checkout@v2
-    - name: first_build
-      run: |
-           ./autogen.sh
-           ./configure
-           make
-           sudo make install
-           sudo make uninstall
-           make distclean
-    - name: make_dist
-      run: |
-           ./autogen.sh
-           ./configure
-           make dist
-           mkdir test_dist
-           mv nbtscan-*.tar.gz test_dist
-           cd test_dist
-           tar -xvf nbtscan-*.tar.gz
-           rm -f nbtscan-*.tar.gz
-           cd nbtscan-*
-           ./autogen.sh
-           ./configure
-           make
-           sudo make install
-           sudo make uninstall
-           make distclean
+    strategy:  
+      matrix:  
+        os: [ubuntu-latest, windows-latest]  
+        arch: [x86, x64]  
+
+    steps:  
+    - uses: actions/checkout@v2  
+
+    - name: Set up dependencies  
+      run: |  
+        if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then  
+          sudo apt-get install -y build-essential  
+          if [ "${{ matrix.arch }}" == "x86" ]; then  
+            sudo apt-get install -y gcc-multilib  
+            export CFLAGS=-m32  
+            export LDFLAGS=-m32  
+            export PKG_CONFIG_PATH=/usr/lib/i386-linux-gnu/pkgconfig  
+          fi  
+        else  
+          if [ "${{ matrix.arch }}" == "x86" ]; then  
+            sudo apt-get install -y mingw-w64  
+            alias cmake=cmake-x86  
+          else  
+            sudo apt-get install -y mingw-w64  
+          fi  
+
+    - name: first_build  
+      run: |  
+        ./autogen.sh  
+        ./configure  
+        make  
+        make install  
+        make uninstall  
+        make distclean  
+
+    - name: make_dist  
+      run: |  
+        ./autogen.sh  
+        ./configure  
+        make dist  
+        mkdir test_dist  
+        mv nbtscan-*.tar.gz test_dist  
+        cd test_dist  
+        tar -xvf nbtscan-*.tar.gz  
+        rm -f nbtscan-*.tar.gz  
+        cd nbtscan-*  
+        ./autogen.sh  
+        ./configure  
+        make  
+        make install  
+        make uninstall  
+        make distclean  
+
+    - name: Create Release  
+      id: create_release  
+      uses: actions/create-release@v1  
+      env:  
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  
+      with:  
+        tag_name: ${{ github.ref }}  
+        release_name: Release ${{ github.ref }}  
+        draft: false  
+        prerelease: false  
+        
+    - name: Upload Release Asset  
+      uses: actions/upload-release-asset@v1  
+      env:  
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  
+      with:  
+        upload_url: ${{ steps.create_release.outputs.upload_url }}  
+        asset_path: ./test_dist/nbtscan-*.tar.gz  
+        asset_name: nbtscan-${{ matrix.os }}-${{ matrix.arch }}.tar.gz  
+        asset_content_type: application/gzip
